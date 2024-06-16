@@ -111,6 +111,7 @@ void Axis::handle() {
         else if(endstopMin)
         {
           homingState = FINISHED;
+          probingState = FINISHED;
           targetPos = 0;
           stepper.setCurrentPosition(0);
           stepper.moveTo(0);
@@ -251,13 +252,11 @@ HomingState Axis::getProbingState()
 
 void Axis::homing() {
   homingState = NOT_HOMED;
-  stepper.setMaxSpeed(mmToSteps(HOMING_SPEED));
 }
 
 void Axis::probing() {
   workOffset = 0.0;
   probingState = NOT_HOMED;
-  stepper.setMaxSpeed(mmToSteps(HOMING_SPEED));
 }
 
 void Axis::moveUp(float distance) {
