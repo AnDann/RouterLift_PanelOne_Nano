@@ -53,7 +53,7 @@ Axis::Axis(int stepPin, int dirPin, int enablePin, float stepsPerRev, float micr
 
 void Axis::setupTimer() {
     // Berechnung der desired_step_frequency basierend auf MOVE_SPEED
-    desired_step_frequency = mmToSteps(MOVE_SPEED) * spindleLead / (stepsPerRevolution * microsteps);
+    desired_step_frequency = (MOVE_SPEED * stepsPerRevolution * microsteps) * 2 / spindleLead;
 
     // Set Timer1 to CTC mode
     TCCR1A = 0;
