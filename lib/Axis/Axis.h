@@ -3,8 +3,7 @@
 
 #include <AccelStepper.h>
 
-typedef enum
-{
+typedef enum {
     NONE,
     MOVE_TO_TARGET,
     MOVE_TO_HOME,
@@ -14,14 +13,13 @@ typedef enum
     MIN_REACHED 
 } AxisState;
 
-typedef enum
-{
+typedef enum {
     NOT_HOMED,
     BACKOFF_1,
     MOVE_FAST,
     BACKOFF_2,
     MOVE_SLOW,
-    FINISHED ,
+    FINISHED,
     ERROR
 } HomingState;
 
@@ -41,6 +39,8 @@ private:
     HomingState homingState;
     HomingState probingState;
     long targetPos;
+    void setupTimer();
+
 public:
     Axis(int stepPin, int dirPin, int enablePin, float stepsPerRev, float microsteps, float spindleLead, float minPos, float maxPos, int endstopMin, int endstopMax, int probing);
 
@@ -70,7 +70,6 @@ public:
 private:
     long mmToSteps(float mm);
     float stepsToMM(long steps);
-
 };
 
 #endif  // AXIS_H
