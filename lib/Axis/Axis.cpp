@@ -259,18 +259,21 @@ void Axis::probing() {
   probingState = NOT_HOMED;
 }
 
-void Axis::moveUp(float distance) {
-  setTargetPosition(getCurrentPosition() + distance);
-  moveToPos(targetPos);
+void Axis::moveToMax() {
+  moveToAbsPos(maxPosition);
 }
 
-void Axis::moveDown(float distance) {
-  setTargetPosition(getCurrentPosition() - distance);
-  moveToPos(targetPos);
+void Axis::moveToMin() {
+  moveToAbsPos(minPosition);
 }
 
 void Axis::moveToPos(float position) {
   setTargetPosition(position);
+  moveToTarget();
+}
+
+void Axis::moveToAbsPos(float position) {
+  setAbsTargetPosition(position);
   moveToTarget();
 }
 
@@ -288,6 +291,15 @@ float Axis::getWorkoffset() {
 
 void Axis::setTargetPosition(float newtargetPos) {
   targetPos = mmToSteps(newtargetPos) + workOffset;
+  if (targetPos < (minPosition)) {
+    targetPos = (minPosition);
+  } else if (targetPos > (maxPosition)) {
+    targetPos = (maxPosition);
+  }
+}
+
+void Axis::setAbsTargetPosition(float newtargetPos) {
+  targetPos = mmToSteps(newtargetPos);
   if (targetPos < (minPosition)) {
     targetPos = (minPosition);
   } else if (targetPos > (maxPosition)) {

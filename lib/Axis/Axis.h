@@ -56,13 +56,15 @@ public:
     HomingState getProbingState();
     void handle();
     void probing();
-    void moveUp(float distance);
-    void moveDown(float distance);
+    void moveToMax();
+    void moveToMin();
     void moveToPos(float position);
+    void moveToAbsPos(float position);
     float getCurrentPosition();
     float getTargetPosition();
     float getWorkoffset();
     void setTargetPosition(float targetPos);
+    void setAbsTargetPosition(float targetPos);
     void moveToTarget();
 
 private:

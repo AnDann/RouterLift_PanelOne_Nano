@@ -52,21 +52,25 @@ unsigned long _lastEncoderRead = 0, _lastDisplayUpdate = 0;
 const char axisStateText[][14] PROGMEM = {"None", "Go to Target", "Go to Home", "Go to Probe", "In Position", "Max!", "Min!"};
 const char homingStateText[][10] PROGMEM = {"None", "Backoff 1", "Move Fast", "Backoff 2", "Move slow", "Homed", "Error"};
 const char probingStateText[][10] PROGMEM = {"None", "Backoff 1", "Move Fast", "Backoff 2", "Move slow", "Probed", "Error"};
-const char menuOptions[][13] PROGMEM = {"Probing", "Homing", "Main Screen"};
+const char menuOptions[][13] PROGMEM = {"Probing", "Homing", "Move to Max", "Move to Min", "Back"};
 
 enum State {
   MAIN_SCREEN,
   MENU_SCREEN,
   PROBING,
-  HOMING
+  HOMING,
+  MOVE_TO_MAX,
+  MOVE_TO_MIN
 };
 
 State currentState = MAIN_SCREEN;
 int currentMenuIndex = 0;
+int menuScrollOffset = 0; // Offset for scrolling the menu
 
 // Function prototypes
 int readEncoder(bool accelerated);
 void displayMenu();
+void lcd_print_P(const char* str);
 
 void setup(void)
 {
@@ -75,9 +79,9 @@ void setup(void)
 
   lcd.begin(20, 4);
   lcd.setCursor(0, 0);
-  lcd.print("RouterLift V0.01");
+  lcd.print(F("RouterLift V0.01"));
   lcd.setCursor(0, 1);
-  lcd.print("Starting up...");
+  lcd.print(F("Starting up..."));
   lcd.setCursor(0, 2);
 
   Serial.begin(115200);
@@ -97,14 +101,14 @@ void loop(void)
         lcd.setCursor(0, 0);
         lcd.print(F("Status:             "));
         lcd.setCursor(7, 0);
-        lcd.print(axisStateText[lift.getState()]);
+        lcd_print_P(axisStateText[lift.getState()]);
 
         lcd.setCursor(0, 1);
-        lcd.print("         :          ");
+        lcd.print(F("         :          "));
         lcd.setCursor(0, 1);
-        lcd.print(homingStateText[lift.getHomingState()]);
+        lcd_print_P(homingStateText[lift.getHomingState()]);
         lcd.setCursor(10, 1);
-        lcd.print(probingStateText[lift.getProbingState()]);
+        lcd_print_P(probingStateText[lift.getProbingState()]);
 
         lcd.setCursor(0, 2);
         lcd.print(F("Soll:               "));
@@ -131,6 +135,7 @@ void loop(void)
       } else if (buttonOk.read() == LOW && buttonOk.currentDuration() > 1000) {
         currentState = MENU_SCREEN;
         currentMenuIndex = 0;
+        menuScrollOffset = 0; // Reset scroll offset
         displayMenu();
       }
       break;
@@ -139,16 +144,30 @@ void loop(void)
     {
       int encoderMove = readEncoder(false);
       if (encoderMove != 0) {
-        currentMenuIndex = (currentMenuIndex + encoderMove) % 3;
-        if (currentMenuIndex < 0) currentMenuIndex += 3;
-        displayMenu();
+        int newIndex = currentMenuIndex + encoderMove;
+        if (newIndex >= 0 && newIndex < 5) {
+          currentMenuIndex = newIndex;
+          if (currentMenuIndex == 3) {
+            // Handle scrolling when reaching the fourth menu option
+            if (encoderMove > 0 && menuScrollOffset < 1) {
+              menuScrollOffset++;
+            } else if (encoderMove < 0 && menuScrollOffset > 0) {
+              menuScrollOffset--;
+            }
+          }
+          displayMenu();
+        }
       }
 
-      if (buttonOk.rose()) {
+      if (buttonOk.fell()) {
         if (currentMenuIndex == 0) {
           currentState = PROBING;
         } else if (currentMenuIndex == 1) {
           currentState = HOMING;
+        } else if (currentMenuIndex == 2) {
+          currentState = MOVE_TO_MAX;
+        } else if (currentMenuIndex == 3) {
+          currentState = MOVE_TO_MIN;
         } else {
           currentState = MAIN_SCREEN;
         }
@@ -165,6 +184,17 @@ void loop(void)
       lift.homing();
       currentState = MAIN_SCREEN;
       break;
+
+    case MOVE_TO_MAX:
+      lift.moveToMax();
+      currentState = MAIN_SCREEN;
+      break;
+
+    case MOVE_TO_MIN:
+      lift.moveToMin();
+      currentState = MAIN_SCREEN;
+      break;
+
     default:
       break;
   }
@@ -172,16 +202,17 @@ void loop(void)
 
 void displayMenu() {
   lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print(F("Menu:"));
-  for (int i = 0; i < 3; i++) {
-    lcd.setCursor(0, i + 1);
-    if (i == currentMenuIndex) {
-      lcd.print(F("> "));
-    } else {
-      lcd.print(F("  "));
+  for (int i = 0; i < 4; i++) {
+    int menuIndex = i + menuScrollOffset;
+    lcd.setCursor(0, i);
+    if (menuIndex >= 0 && menuIndex < 5) {
+      if (menuIndex == currentMenuIndex) {
+        lcd.print(F("> "));
+      } else {
+        lcd.print(F("  "));
+      }
+      lcd_print_P(menuOptions[menuIndex]);
     }
-    lcd.print(menuOptions[i]);
   }
 }
 
@@ -218,4 +249,10 @@ int readEncoder(bool accelerated)
     _lastEncoderRead = millis();
   }
   return 0;
+}
+
+void lcd_print_P(const char* str) {
+  char buffer[20]; // Adjust size as needed
+  strcpy_P(buffer, str);
+  lcd.print(buffer);
 }
