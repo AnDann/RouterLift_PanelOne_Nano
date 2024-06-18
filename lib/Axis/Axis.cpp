@@ -48,7 +48,7 @@ Axis::Axis(int stepPin, int dirPin, int enablePin, float stepsPerRev, float micr
     stepperPtr = &stepper; // Zeiger auf das Stepper-Objekt setzen
     stepperRunning = true; // Initial Flag to true
 
-    setupTimer();
+//    setupTimer();
 }
 
 void Axis::setupTimer() {
@@ -68,7 +68,7 @@ void Axis::setupTimer() {
 
 ISR(TIMER1_COMPA_vect) {
     if (stepperRunning && stepperPtr) {
-        stepperPtr->run();
+//        stepperPtr->run();
     }
 }
 
@@ -126,7 +126,6 @@ void Axis::handle() {
                     stepper.move(-1);
                 } else if (endstopMin) {
                     homingState = FINISHED;
-                    probingState = FINISHED;
                     targetPos = 0;
                     stepper.setCurrentPosition(0);
                     stepper.moveTo(0);
@@ -205,6 +204,7 @@ void Axis::handle() {
     }
 
     stepperRunning = true; // Allow the ISR to call stepper.run()
+    stepper.run();
 }
 
 bool Axis::getEndstopMax() {
@@ -251,6 +251,7 @@ HomingState Axis::getProbingState() {
 
 void Axis::homing() {
     homingState = NOT_HOMED;
+    probingState = FINISHED;
 }
 
 void Axis::probing() {
@@ -266,12 +267,16 @@ void Axis::moveToMin() {
     moveToAbsPos(minPosition);
 }
 
+void Axis::moveToWorkpiece() {
+    moveToAbsPos(workOffset);
+}
+
 void Axis::moveToPos(float position) {
     setTargetPosition(position);
     moveToTarget();
 }
 
-void Axis::moveToAbsPos(float position) {
+void Axis::moveToAbsPos(long position) {
     setAbsTargetPosition(position);
     moveToTarget();
 }
@@ -297,8 +302,8 @@ void Axis::setTargetPosition(float newtargetPos) {
     }
 }
 
-void Axis::setAbsTargetPosition(float newtargetPos) {
-    targetPos = mmToSteps(newtargetPos);
+void Axis::setAbsTargetPosition(long newtargetPos) {
+    targetPos = newtargetPos;
     if (targetPos < minPosition) {
         targetPos = minPosition;
     } else if (targetPos > maxPosition) {

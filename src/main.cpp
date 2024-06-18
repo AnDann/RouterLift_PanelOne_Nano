@@ -47,12 +47,13 @@ Axis lift(STEP_PIN, DIR_PIN, ENABLE_PIN, 200, 8, 8, 0.0, 119.0, ENDSTOP_MIN_PIN,
 bool buttonPressed = false;
 long _lastEncoderPosition = 0;
 unsigned long _lastEncoderRead = 0, _lastDisplayUpdate = 0;
+bool motorEnabled = false; // Flag for motor enable/disable
 
 // LCD Texts
 const char axisStateText[][14] PROGMEM = {"None", "Go to Target", "Go to Home", "Go to Probe", "In Position", "Max!", "Min!"};
 const char homingStateText[][10] PROGMEM = {"None", "Backoff 1", "Move Fast", "Backoff 2", "Move slow", "Homed", "Error"};
 const char probingStateText[][10] PROGMEM = {"None", "Backoff 1", "Move Fast", "Backoff 2", "Move slow", "Probed", "Error"};
-const char menuOptions[][13] PROGMEM = {"Probing", "Homing", "Move to Max", "Move to Min", "Back"};
+const char menuOptions[][20] PROGMEM = {"Probing", "Homing", "Move to Max", "Move to Min", "Move to Workpiece", "Motor On/Off", "Back"};
 
 enum State {
   MAIN_SCREEN,
@@ -60,7 +61,9 @@ enum State {
   PROBING,
   HOMING,
   MOVE_TO_MAX,
-  MOVE_TO_MIN
+  MOVE_TO_MIN,
+  MOVE_TO_WORKPIECE,
+  MOTOR_TOGGLE
 };
 
 State currentState = MAIN_SCREEN;
@@ -79,7 +82,7 @@ void setup(void)
 
   lcd.begin(20, 4);
   lcd.setCursor(0, 0);
-  lcd.print(F("RouterLift V0.01"));
+  lcd.print(F("RouterLift V1.00"));
   lcd.setCursor(0, 1);
   lcd.print(F("Starting up..."));
   lcd.setCursor(0, 2);
@@ -145,18 +148,18 @@ void loop(void)
       int encoderMove = readEncoder(false);
       if (encoderMove != 0) {
         int newIndex = currentMenuIndex + encoderMove;
-        if (newIndex >= 0 && newIndex < 5) {
+        if (newIndex >= 0 && newIndex < 7) {
           currentMenuIndex = newIndex;
-          if (currentMenuIndex == 3) {
+          if (currentMenuIndex >= 3) {
             // Handle scrolling when reaching the fourth menu option
-            if (encoderMove > 0 && menuScrollOffset < 1) {
-              menuScrollOffset++;
+            if (encoderMove > 0 && menuScrollOffset < 3) {
+              menuScrollOffset += encoderMove;
             } else if (encoderMove < 0 && menuScrollOffset > 0) {
-              menuScrollOffset--;
+              menuScrollOffset += encoderMove;
             }
           }
-          displayMenu();
         }
+        displayMenu();
       }
 
       if (buttonOk.fell()) {
@@ -168,6 +171,12 @@ void loop(void)
           currentState = MOVE_TO_MAX;
         } else if (currentMenuIndex == 3) {
           currentState = MOVE_TO_MIN;
+        } else if (currentMenuIndex == 4) {
+          currentState = MOVE_TO_WORKPIECE;
+        } else if (currentMenuIndex == 5) {
+          currentState = MOTOR_TOGGLE;
+          motorEnabled = !motorEnabled; // Toggle motor enable flag
+          digitalWrite(ENABLE_PIN, motorEnabled ? HIGH : LOW); // Enable or disable motor
         } else {
           currentState = MAIN_SCREEN;
         }
@@ -195,6 +204,15 @@ void loop(void)
       currentState = MAIN_SCREEN;
       break;
 
+    case MOVE_TO_WORKPIECE:
+      lift.moveToWorkpiece();
+      currentState = MAIN_SCREEN;
+      break;
+
+    case MOTOR_TOGGLE:
+      currentState = MAIN_SCREEN; // Return to main screen after toggling motor
+      break;
+
     default:
       break;
   }
@@ -205,7 +223,7 @@ void displayMenu() {
   for (int i = 0; i < 4; i++) {
     int menuIndex = i + menuScrollOffset;
     lcd.setCursor(0, i);
-    if (menuIndex >= 0 && menuIndex < 5) {
+    if (menuIndex >= 0 && menuIndex < 7) {
       if (menuIndex == currentMenuIndex) {
         lcd.print(F("> "));
       } else {
