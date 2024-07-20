@@ -51,8 +51,8 @@ bool motorEnabled = false; // Flag for motor enable/disable
 
 // LCD Texts
 const char axisStateText[][14] PROGMEM = {"None", "Go to Target", "Go to Home", "Go to Probe", "In Position", "Max!", "Min!"};
-const char homingStateText[][10] PROGMEM = {"None", "Backoff 1", "Move Fast", "Backoff 2", "Move slow", "Homed", "Error"};
-const char probingStateText[][10] PROGMEM = {"None", "Backoff 1", "Move Fast", "Backoff 2", "Move slow", "Probed", "Error"};
+const char homingStateText[][10] PROGMEM = {"None", "Move Fast", "Backoff", "Move slow", "Homed", "Error"};
+const char probingStateText[][10] PROGMEM = {"None", "Move Fast", "Backoff", "Move slow", "Probed", "Error"};
 const char menuOptions[][20] PROGMEM = {"Probing", "Homing", "Move to Max", "Move to Min", "Move to Workpiece", "Motor On/Off", "Back"};
 
 enum State {
@@ -134,7 +134,11 @@ void loop(void)
       }
 
       if (buttonOk.rose() && buttonOk.previousDuration() < 1000) {
-        lift.moveToTarget();
+        if(lift.getWorkoffset() > 0.0 && lift.getTargetPosition() > 0.0) {
+          lift.plungeToTarget();
+        }
+        else
+          lift.moveToTarget();
       } else if (buttonOk.read() == LOW && buttonOk.currentDuration() > 1000) {
         currentState = MENU_SCREEN;
         currentMenuIndex = 0;

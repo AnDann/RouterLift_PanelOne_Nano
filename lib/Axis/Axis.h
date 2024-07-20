@@ -17,9 +17,8 @@ typedef enum {
 // Enumeration for different homing states
 typedef enum {
     NOT_HOMED,  // Not homed
-    BACKOFF_1,  // Backoff step 1
     MOVE_FAST,  // Fast movement
-    BACKOFF_2,  // Backoff step 2
+    BACKOFF,    // Backoff step
     MOVE_SLOW,  // Slow movement
     FINISHED,   // Finished homing
     ERROR       // Error occurred
@@ -69,7 +68,8 @@ public:
     float getTargetPosition();  // Get target position of the axis
     float getWorkoffset();     // Get work offset of the axis
     void setTargetPosition(float targetPos);  // Set target position of the axis
-    void moveToTarget();       // Move axis to the target position
+    void moveToTarget();       // Move axis to the target position with move speed
+    void plungeToTarget();       // Move axis to the target position with plunge speed
 
 private:
     void moveToAbsPos(long position);   // Move axis to an absolute position

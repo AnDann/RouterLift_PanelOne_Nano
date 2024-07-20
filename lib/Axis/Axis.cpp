@@ -84,20 +84,13 @@ void Axis::handle() {
         switch (homingState) {
             case NOT_HOMED:
                 if (endstopMin) {
-                    homingState = BACKOFF_2;
+                    homingState = BACKOFF;
                     stepper.setMaxSpeed(mmToSteps(MOVE_SPEED));
                     stepper.move(mmToSteps(BACKOFF_DISTANCE));
                 } else {
-                    homingState = BACKOFF_1;
-                }
-                break;
-            case BACKOFF_1:
-                if (!endstopMin && !stepper.isRunning()) {
                     homingState = MOVE_FAST;
                     stepper.setMaxSpeed(mmToSteps(HOMING_SPEED));
                     stepper.move(mmToSteps(-MAX_HOME_DISTANCE));
-                } else if (!stepper.isRunning()) {
-                    homingState = ERROR;
                 }
                 break;
             case MOVE_FAST:
@@ -106,14 +99,14 @@ void Axis::handle() {
                     stepper.moveTo(0);
                     stepper.setSpeed(0);
                 } else if (endstopMin && !stepper.isRunning()) {
-                    homingState = BACKOFF_2;
+                    homingState = BACKOFF;
                     stepper.setMaxSpeed(mmToSteps(MOVE_SPEED));
                     stepper.move(mmToSteps(BACKOFF_DISTANCE));
                 } else if (!endstopMin && !stepper.isRunning()) {
                     homingState = ERROR;
                 }
                 break;
-            case BACKOFF_2:
+            case BACKOFF:
                 if (!endstopMin && !stepper.isRunning()) {
                     homingState = MOVE_SLOW;
                 } else if (!stepper.isRunning()) {
@@ -142,7 +135,7 @@ void Axis::handle() {
         switch (probingState) {
             case NOT_HOMED:
                 if (probe) {
-                    probingState = BACKOFF_2;
+                    probingState = BACKOFF;
                     stepper.setMaxSpeed(mmToSteps(MOVE_SPEED));
                     stepper.move(mmToSteps(-BACKOFF_DISTANCE));
                 } else {
@@ -155,15 +148,13 @@ void Axis::handle() {
                 if (probe && stepper.isRunning()) {
                     stepper.moveTo(stepper.currentPosition());
                     stepper.setSpeed(0);
-                } else if (probe && !stepper.isRunning()) {
-                    probingState = BACKOFF_2;
+                } else if (!stepper.isRunning()) {
+                    probingState = BACKOFF;
                     stepper.setMaxSpeed(mmToSteps(MOVE_SPEED));
                     stepper.move(mmToSteps(-BACKOFF_DISTANCE));
-                } else if (!probe && !stepper.isRunning()) {
-                    probingState = ERROR;
                 }
                 break;
-            case BACKOFF_2:
+            case BACKOFF:
                 if (!probe && !stepper.isRunning()) {
                     probingState = MOVE_SLOW;
                 } else if (!stepper.isRunning()) {
@@ -234,10 +225,10 @@ bool Axis::isError() {
 AxisState Axis::getState() {
     if (homingState != FINISHED) return MOVE_TO_HOME;
     else if (probingState != FINISHED) return MOVE_TO_PROBE;
-    else if (stepper.distanceToGo() != 0) return MOVE_TO_TARGET;
-    else if (homingState == FINISHED && stepper.distanceToGo() == 0) return INPOSITION;
     else if (homingState == FINISHED && getEndstopMax()) return MAX_REACHED;
     else if (homingState == FINISHED && getEndstopMin()) return MIN_REACHED;
+    else if (stepper.distanceToGo() != 0) return MOVE_TO_TARGET;
+    else if (homingState == FINISHED && stepper.distanceToGo() == 0) return INPOSITION;
     else return NONE;
 }
 
@@ -314,6 +305,12 @@ void Axis::setAbsTargetPosition(long newtargetPos) {
 void Axis::moveToTarget() {
     if (homingState != FINISHED || probingState != FINISHED) return;
     stepper.setMaxSpeed(mmToSteps(MOVE_SPEED));
+    stepper.moveTo(targetPos);
+}
+
+void Axis::plungeToTarget() {
+    if (homingState != FINISHED || probingState != FINISHED) return;
+    stepper.setMaxSpeed(mmToSteps(PLUNGE_SPEED));
     stepper.moveTo(targetPos);
 }
 
